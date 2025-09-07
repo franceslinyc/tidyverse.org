@@ -43,7 +43,23 @@ This blog post will describe each.
 
 ## filtro
 
-filtro is.
+Feature selection is one of the most important steps in building robust machine learning models. By keeping only the most relevant predictors, we can reduce overfitting, improve model interpretability, and speed up computation.
+
+filtro is tidy tools designed specifically for filter-based supervised feature selection.
+
+filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include:
+
+- p-values
+
+- correlation
+
+- random forest feature importance
+
+- information gain, and more.
+
+With filtro, you can quickly rank your variables and select either the top proportion or the top number features that best contribute to your model.
+
+Sometimes, you may want to combine multiple scores into one unified score. filtro also supports multiparameter optimization, powered by the desirability2 package.
 
 ## important
 
