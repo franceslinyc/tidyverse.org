@@ -45,9 +45,7 @@ This blog post will describe each.
 
 Feature selection is one of the most important steps in building robust machine learning models. By keeping only the most relevant predictors, we can reduce overfitting, improve model interpretability, and speed up computation.
 
-filtro is tidy tools designed specifically for filter-based supervised feature selection.
-
-filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include:
+filtro is tidy tools designed specifically for filter-based supervised feature selection. filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include:
 
 - p-values
 
@@ -59,7 +57,116 @@ filtro makes it easy to score, rank, and select features using a wide range of s
 
 With filtro, you can quickly rank your variables and select either the top proportion or the top number features that best contribute to your model.
 
+```{r}
+library(filtro)
+library(desirability2)
+library(dplyr)
+library(modeldata)
+```
+
+```{r}
+ames_subset <- modeldata::ames |>
+  # Use a subset of data for demonstration
+  dplyr::select(
+    Sale_Price,
+    MS_SubClass,
+    MS_Zoning,
+    Lot_Frontage,
+    Lot_Area,
+    Street
+  )
+ames_subset <- ames_subset |>
+  dplyr::mutate(Sale_Price = log10(Sale_Price))
+```
+
+```{r}
+# Pearson correlation
+ames_cor_pearson_res <-
+  score_cor_pearson |>
+  fit(Sale_Price ~ ., data = ames_subset)
+ames_cor_pearson_res@results
+```
+
+```{r}
+# Forest importance
+ames_imp_rf_reg_res <-
+  score_imp_rf |>
+  fit(Sale_Price ~ ., data = ames_subset, seed = 42)
+ames_imp_rf_reg_res@results
+```
+
+```{r}
+# Information gain
+ames_info_gain_reg_res <-
+  score_info_gain |>
+  fit(Sale_Price ~ ., data = ames_subset)
+ames_info_gain_reg_res@results
+```
+
 Sometimes, you may want to combine multiple scores into one unified score. filtro also supports multiparameter optimization, powered by the desirability2 package.
+
+```{r}
+# Create a list
+class_score_list <- list(
+  ames_cor_pearson_res,
+  ames_imp_rf_reg_res,
+  ames_info_gain_reg_res
+)
+```
+
+```{r}
+# Fill safe values
+ames_scores_results <- class_score_list |>
+  fill_safe_values() |>
+  # Remove outcome
+  dplyr::select(-outcome)
+ames_scores_results
+```
+
+```{r}
+# Single and multi-parameter optimization using desirability functions
+# Optimize correlation alone
+ames_scores_results |>
+  show_best_desirability_prop(
+    maximize(cor_pearson, low = 0, high = 1)
+  )
+
+# Optimize correlation and forest importance
+ames_scores_results |>
+  show_best_desirability_prop(
+    maximize(cor_pearson, low = 0, high = 1),
+    maximize(imp_rf)
+  )
+
+# Optimize correlation, forest importance and information gain
+ames_scores_results |>
+  show_best_desirability_prop(
+    maximize(cor_pearson, low = 0, high = 1),
+    maximize(imp_rf),
+    maximize(infogain)
+  )
+
+# Same as above, but retain only a proportion of predictors
+ames_scores_results |>
+  show_best_desirability_prop(
+    maximize(cor_pearson, low = 0, high = 1),
+    maximize(imp_rf),
+    maximize(infogain),
+    prop_terms = 0.2
+  )
+
+# Optimize toward a target
+ames_scores_results |>
+  show_best_desirability_prop(
+    target(cor_pearson, low = 0.2, target = 0.255, high = 0.9)
+  )
+
+# Optimize with box constraints
+ames_scores_results |>
+  show_best_desirability_prop(
+    constrain(cor_pearson, low = 0.2, high = 1)
+  )
+```
 
 ## important
 
