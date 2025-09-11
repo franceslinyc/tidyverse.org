@@ -43,7 +43,7 @@ This blog post will describe each.
 
 ## filtro
 
-Feature selection is one of the most important steps in building robust machine learning models. By keeping only the most relevant predictors, we can reduce overfitting, improve model interpretability, and speed up computation.
+Feature selection is one of the most important steps in building robust statistical and machine learning models. By keeping only the most relevant predictors, we can reduce overfitting, improve model interpretability, and speed up computation.
 
 filtro is tidy tools designed specifically for filter-based supervised feature selection. filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include:
 
@@ -64,6 +64,8 @@ library(dplyr)
 library(modeldata)
 ```
 
+The {modeldata} package contains a data set used to predict housing sale price. It has 73 predictor columns and a numeric variable Sale_Price (the outcome). Since the outcome are right-skewed, we apply a log (base 10) transformation.
+
 ```{r}
 ames_subset <- modeldata::ames |>
   # Use a subset of data for demonstration
@@ -79,6 +81,8 @@ ames_subset <- ames_subset |>
   dplyr::mutate(Sale_Price = log10(Sale_Price))
 ```
 
+To apply the correlation filter, we first create a score class object to define the scoring method, and then use the `fit()` method with the standard formula to compute the scores. The data frame of results can be accessed via object@results.
+
 ```{r}
 # Pearson correlation
 ames_cor_pearson_res <-
@@ -87,6 +91,10 @@ ames_cor_pearson_res <-
 ames_cor_pearson_res@results
 ```
 
+Because the outcome is numeric, any predictor that is not a factor will result in an NA. In case where NA is produced, a safe value can be used to retain the predictor, and can be accessed via object@fallback_value.
+
+We can also apply the random forest filter: 
+
 ```{r}
 # Forest importance
 ames_imp_rf_reg_res <-
@@ -94,6 +102,8 @@ ames_imp_rf_reg_res <-
   fit(Sale_Price ~ ., data = ames_subset, seed = 42)
 ames_imp_rf_reg_res@results
 ```
+
+Similarly, the entropy-based filter can be applied: 
 
 ```{r}
 # Information gain
@@ -105,6 +115,8 @@ ames_info_gain_reg_res@results
 
 Sometimes, you may want to combine multiple scores into one unified score. filtro also supports multiparameter optimization, powered by the desirability2 package.
 
+To do this, we first collect the individual score objects into a list.  
+
 ```{r}
 # Create a list
 class_score_list <- list(
@@ -114,6 +126,8 @@ class_score_list <- list(
 )
 ```
 
+Then, we prepare the results by filling in safe values for missing entries and removing the outcome column.
+
 ```{r}
 # Fill safe values
 ames_scores_results <- class_score_list |>
@@ -122,6 +136,8 @@ ames_scores_results <- class_score_list |>
   dplyr::select(-outcome)
 ames_scores_results
 ```
+
+Now, we can perform single- or multi-parameter optimization using desirability functions. For example: 
 
 ```{r}
 # Single and multi-parameter optimization using desirability functions
@@ -167,6 +183,8 @@ ames_scores_results |>
     constrain(cor_pearson, low = 0.2, high = 1)
   )
 ```
+
+Currently, filtro implements a total of six filters. For more details and examples, [please visit the package site](https://filtro.tidymodels.org). Developers can also check out a [post on how to create custom scoring objects](https://www.tidymodels.org/learn/develop/filtro/). 
 
 ## important
 
