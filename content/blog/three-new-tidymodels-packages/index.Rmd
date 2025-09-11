@@ -45,15 +45,7 @@ This blog post will describe each.
 
 Feature selection is one of the most important steps in building robust statistical and machine learning models. By keeping only the most relevant predictors, we can reduce overfitting, improve model interpretability, and speed up computation.
 
-filtro is tidy tools designed specifically for filter-based supervised feature selection. filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include:
-
-- p-values
-
-- correlation
-
-- random forest feature importance
-
-- information gain, and more.
+filtro is tidy tools designed specifically for filter-based supervised feature selection. filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include: p-values, correlation, random forest feature importance, information gain, and more.
 
 With filtro, you can quickly rank your variables and select either the top proportion or the top number features that best contribute to your model.
 
@@ -103,7 +95,7 @@ ames_imp_rf_reg_res <-
 ames_imp_rf_reg_res@results
 ```
 
-Similarly, the entropy-based filter can be applied: 
+Similarly, we can apply the entropy-based filter: 
 
 ```{r}
 # Information gain
@@ -126,7 +118,7 @@ class_score_list <- list(
 )
 ```
 
-Then, we prepare the results by filling in safe values for missing entries and removing the outcome column.
+Then, we prepare the results by filling in safe values for NA, as well as removing the outcome column.
 
 ```{r}
 # Fill safe values
@@ -137,7 +129,7 @@ ames_scores_results <- class_score_list |>
 ames_scores_results
 ```
 
-Now, we can perform single- or multi-parameter optimization using desirability functions. For example: 
+Now, we can perform single- or multi-parameter optimization using desirability functions. The `show_best_desirability_prop()` method allows us to rank the scores according to specified criteria. 
 
 ```{r}
 # Single and multi-parameter optimization using desirability functions
@@ -146,7 +138,14 @@ ames_scores_results |>
   show_best_desirability_prop(
     maximize(cor_pearson, low = 0, high = 1)
   )
+```
 
+Here, the `.d_max_cor_pearson` column represents the desirability of the correlation score for each predictor, with $1.0$ being most desirable and $0$ indicating an unacceptable outcome. For example, predictors like `MS_SubClass`, `MS_Zoning`, and `Street` achieve the maximum desirability of $1$ for correlation, while `Lot_Area` and `Lot_Frontage` are lower. The `.d_overall` column summarizes the overall desirability across all scores. Since we are optimizing only a single parameter here, the `.d_max_cor_pearson` and `.d_overall` columns are identical in this example.
+
+For more examples: 
+
+```{r}
+# Single and multi-parameter optimization using desirability functions
 # Optimize correlation and forest importance
 ames_scores_results |>
   show_best_desirability_prop(
@@ -184,7 +183,7 @@ ames_scores_results |>
   )
 ```
 
-Currently, filtro implements a total of six filters. For more details and examples, [please visit the package site](https://filtro.tidymodels.org). Developers can also check out a [post on how to create custom scoring objects](https://www.tidymodels.org/learn/develop/filtro/). 
+Currently, filtro implements a total of six filters. For more details and examples, [please visit the package site](https://filtro.tidymodels.org). Developers can also check out a [post on how to create custom score objects](https://www.tidymodels.org/learn/develop/filtro/). 
 
 ## important
 
