@@ -45,148 +45,20 @@ This blog post will describe each.
 
 Feature selection is an important step in building robust machine learning models. By keeping only the most relevant predictors, we can reduce overfitting, improve model interpretability, and speed up computation.
 
-filtro is tidy tools designed specifically for filter-based supervised feature selection. filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include: p-values, correlation, random forest feature importance, information gain, and more.
+filtro is a low-level tidy tools designed specifically for filter-based supervised feature selection. filtro makes it easy to score, rank, and select features using a wide range of statistical and model-based metrics. These include: p-values, correlation, random forest feature importance, information gain, and more.
 
-With filtro, we can quickly rank the variables and select either the top proportion or the top number features that best contribute to our model. 
+With filtro, we can quickly rank the variables and select either the top proportion or the top number features that best contribute to our model. filtro also supports multi-parameter optimization via desirability functions. 
 
-First, we need to load the required packages:
+Currently, filtro implements a total of six filters, and the filtering framework is written in S7 for greater consistency and extensibility.
 
-```{r}
-library(filtro)
-library(desirability2)
-library(dplyr)
-library(modeldata)
-```
-
-The modeldata package contains a data set used to predict housing sale price. It has 73 predictor columns and a numeric variable Sale_Price (the outcome). Since the outcome are right-skewed, we apply a log (base 10) transformation.
+The available score class objects are:
 
 ```{r}
-ames_subset <- modeldata::ames |>
-  # Use a subset of data for demonstration
-  dplyr::select(
-    Sale_Price,
-    MS_SubClass,
-    MS_Zoning,
-    Lot_Frontage,
-    Lot_Area,
-    Street
-  )
-ames_subset <- ames_subset |>
-  dplyr::mutate(Sale_Price = log10(Sale_Price))
+#| echo: false
+grep("^score_", ls("package:filtro"), value = TRUE)
 ```
 
-To apply the correlation filter, we first create a score class object to define the scoring method, and then use the `fit()` method with the standard formula to compute the scores. The data frame of results can be accessed via object@results.
-
-```{r}
-# Pearson correlation
-ames_cor_pearson_res <-
-  score_cor_pearson |>
-  fit(Sale_Price ~ ., data = ames_subset)
-ames_cor_pearson_res@results
-```
-
-Because the outcome is numeric, any predictor that is not a factor will result in an NA. In case where NA is produced, a safe value can be used to retain the predictor, and can be accessed via object@fallback_value.
-
-We can also apply the random forest filter: 
-
-```{r}
-# Forest importance
-ames_imp_rf_reg_res <-
-  score_imp_rf |>
-  fit(Sale_Price ~ ., data = ames_subset, seed = 42)
-ames_imp_rf_reg_res@results
-```
-
-Similarly, we can apply the entropy-based filter: 
-
-```{r}
-# Information gain
-ames_info_gain_reg_res <-
-  score_info_gain |>
-  fit(Sale_Price ~ ., data = ames_subset)
-ames_info_gain_reg_res@results
-```
-
-Sometimes, we may want to combine multiple scores into one unified score. filtro also supports multiparameter optimization, powered by the desirability2 package.
-
-To do this, we first collect the individual score objects into a list.  
-
-```{r}
-# Create a list
-class_score_list <- list(
-  ames_cor_pearson_res,
-  ames_imp_rf_reg_res,
-  ames_info_gain_reg_res
-)
-```
-
-Then, we prepare the results by filling in safe values for NA, as well as removing the outcome column.
-
-```{r}
-# Fill safe values
-ames_scores_results <- class_score_list |>
-  fill_safe_values() |>
-  # Remove outcome
-  dplyr::select(-outcome)
-ames_scores_results
-```
-
-Now, we can perform single- or multi-parameter optimization using desirability functions. The `show_best_desirability_prop()` method allows us to rank the scores according to some verbs, such as `maximize`, `minimize`, `target`, and `constrain`) and their associated criteria (e.g., `prop_terms = `). 
-
-```{r}
-# Single and multi-parameter optimization using desirability functions
-# Optimize correlation alone
-ames_scores_results |>
-  show_best_desirability_prop(
-    maximize(cor_pearson, low = 0, high = 1)
-    # prop_terms defaults to 1 
-  )
-```
-
-Here, the `.d_max_cor_pearson` column represents the desirability of the correlation score for each predictor, with $1.0$ being most desirable and $0.0$ unacceptable. In this example, predictors `MS_SubClass`, `MS_Zoning`, and `Street` achieve the maximum desirability of $1$ for correlation, while `Lot_Area` and `Lot_Frontage` are lower. The `.d_overall` column summarizes the overall desirability using the geometric mean. Since we are optimizing only a single parameter in this example, the `.d_max_cor_pearson` and `.d_overall` columns are identical. 
-
-For more examples: 
-
-```{r}
-# Single and multi-parameter optimization using desirability functions
-# Optimize correlation and forest importance
-ames_scores_results |>
-  show_best_desirability_prop(
-    maximize(cor_pearson, low = 0, high = 1),
-    maximize(imp_rf)
-  )
-
-# Optimize correlation, forest importance and information gain
-ames_scores_results |>
-  show_best_desirability_prop(
-    maximize(cor_pearson, low = 0, high = 1),
-    maximize(imp_rf),
-    maximize(infogain)
-  )
-
-# Same as above, but retain only a proportion of predictors
-ames_scores_results |>
-  show_best_desirability_prop(
-    maximize(cor_pearson, low = 0, high = 1),
-    maximize(imp_rf),
-    maximize(infogain),
-    prop_terms = 0.2
-  )
-
-# Optimize toward a target
-ames_scores_results |>
-  show_best_desirability_prop(
-    target(cor_pearson, low = 0.2, target = 0.255, high = 0.9)
-  )
-
-# Optimize with box constraints
-ames_scores_results |>
-  show_best_desirability_prop(
-    constrain(cor_pearson, low = 0.2, high = 1)
-  )
-```
-
-Currently, filtro implements a total of six filters. For more details and examples, [please visit the package site](https://filtro.tidymodels.org). Developers can also [check out the post on how to create a custom score object](https://www.tidymodels.org/learn/develop/filtro/). 
+For more details and examples, [please visit the package site](https://filtro.tidymodels.org). Developers can also [check out the post on how to create a custom score object](https://www.tidymodels.org/learn/develop/filtro/). 
 
 ## important
 
